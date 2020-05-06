@@ -1,14 +1,11 @@
 package cc.magickiat.demo.kafka.wordcount;
 
-import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.state.KeyValueStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,18 +30,18 @@ public class WordCountApp {
         String outputTopic = "post-wordcount-output";
         StreamsBuilder builder = new StreamsBuilder();
         builder.<String, String>stream(inputTopic)
-            .flatMapValues( value -> Arrays.asList(value.toLowerCase().split("\\W+")))
-            .groupBy((key, value) -> value)
-            .count(Materialized.as("counts-store"))
-            .toStream()
-            .to(outputTopic);
+                .flatMapValues(value -> Arrays.asList(value.toLowerCase().split("\\W+")))
+                .groupBy((key, value) -> value)
+                .count(Materialized.as("counts-store"))
+                .toStream()
+                .to(outputTopic);
 
         // start workflow
         Topology topology = builder.build();
         KafkaStreams streams = new KafkaStreams(topology, config);
         CountDownLatch latch = new CountDownLatch(1);
 
-        Runtime.getRuntime().addShutdownHook(new Thread("shutdown-wordcount-app"){
+        Runtime.getRuntime().addShutdownHook(new Thread("shutdown-wordcount-app") {
             @Override
             public void run() {
                 logger.info("##### Begin Shutdown WordCount App #####");
