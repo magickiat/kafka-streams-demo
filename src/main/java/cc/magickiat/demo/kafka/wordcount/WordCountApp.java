@@ -17,27 +17,17 @@ public class WordCountApp {
 
     private static final Logger logger = LoggerFactory.getLogger(WordCountApp.class);
 
+    public static final String INPUT_TOPIC = "topic-post";
+    public static final String OUTPUT_TOPIC = "post-wordcount-output";
+
     public static void main(String[] args) {
         // config to connect kafka
-        Properties config = new Properties();
-        config.put(StreamsConfig.APPLICATION_ID_CONFIG, "word-count-app");
-        config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-        config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-        config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        Properties config = getConfig();
 
         // streams workflow
-        String inputTopic = "topic-post";
-        String outputTopic = "post-wordcount-output";
-        StreamsBuilder builder = new StreamsBuilder();
-        builder.<String, String>stream(inputTopic)
-                .flatMapValues(value -> Arrays.asList(value.toLowerCase().split("\\W+")))
-                .groupBy((key, value) -> value)
-                .count(Materialized.as("counts-store"))
-                .toStream()
-                .to(outputTopic);
+        Topology topology = createTopology();
 
         // start workflow
-        Topology topology = builder.build();
         KafkaStreams streams = new KafkaStreams(topology, config);
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -58,5 +48,25 @@ public class WordCountApp {
             logger.error(e.getMessage(), e);
         }
 
+    }
+
+    public static Topology createTopology() {
+        StreamsBuilder builder = new StreamsBuilder();
+        builder.<String, String>stream(INPUT_TOPIC)
+                .flatMapValues(value -> Arrays.asList(value.toLowerCase().split("\\W+")))
+                .groupBy((key, value) -> value)
+                .count(Materialized.as("counts-store"))
+                .toStream()
+                .to(OUTPUT_TOPIC);
+        return builder.build();
+    }
+
+    public static Properties getConfig() {
+        Properties config = new Properties();
+        config.put(StreamsConfig.APPLICATION_ID_CONFIG, "word-count-app");
+        config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        return config;
     }
 }
